@@ -1,0 +1,62 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+
+public class paymentPlatform {
+
+	public static void main(String[] args) throws IOException{
+		String serverAddress = "localhost";
+		int condition = 3;
+		System.out.println("Platform Server started...");
+		ServerSocket platform = new ServerSocket(8003);
+		Socket paymentGateway = new Socket(serverAddress, 8004);
+		String checkStatus="";
+		try{
+			while (true) {
+				Socket socket = platform.accept();
+				try{
+					BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+					String check = input.readLine();
+					System.out.println("recieve: "+check);
+					if(check.equals("pay $5 from client")){
+
+						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+						out.println("paymentplatform, comfirm");
+						if(checkStatus.equals("client pay $5")){
+							condition =1;
+						}
+						checkStatus = "pay $5 from client";
+					}
+					if(check.equals("client pay $5")){
+
+						PrintWriter toserver = new PrintWriter(socket.getOutputStream(), true);
+						toserver.println("paymentplatform, comfirm");
+						if(checkStatus.equals("pay $5 from client")){
+							condition =1;
+						}
+						checkStatus = "client pay $5";
+					}
+					if(condition == 1){
+
+						PrintWriter inserver = new PrintWriter(paymentGateway.getOutputStream(), true);
+						inserver.println("platform, client pay $5");
+						BufferedReader frompaymentGateway = new BufferedReader(new InputStreamReader(paymentGateway.getInputStream()));
+						String answer1 = frompaymentGateway.readLine();
+						System.out.println("recieve: " + answer1);
+					}
+					condition++;
+				} finally {
+					socket.close();
+				}
+			}
+		}
+		finally{
+			platform.close();
+			paymentGateway.close();
+		}
+	}
+}
