@@ -1,0 +1,47 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+
+public class paymentGateway {
+
+	public static void main(String[] args) throws IOException{
+		String serverAddress = "localhost";
+		System.out.println("Gateway Server started...");
+//		Socket getServer = new Socket(serverAddress, 8001);
+//		Socket getPlatform = new Socket(serverAddress, 8003);
+		ServerSocket gateway = new ServerSocket(8004);
+		try{
+			while (true) {
+				Socket socket = gateway.accept();
+				try{
+					BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+					String check = input.readLine();
+					System.out.println("reciever: " + check);
+					if(check.equals("platform, client pay $5")){
+
+						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+						out.println("gateway, comfirm payment for platform");
+
+					}
+					if(check.equals("client pay $5")){
+
+						PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+						out.println("gateway, comfirm payment for server");
+
+					}
+				} finally {
+					socket.close();
+				}
+			}
+		}
+		finally{
+//			getPlatform.close();
+//			getServer.close();
+			gateway.close();
+		}
+	}
+}
