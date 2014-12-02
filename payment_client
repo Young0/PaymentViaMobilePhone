@@ -22,9 +22,10 @@ import javax.crypto.spec.PBEParameterSpec;
 
 public class paymentClient {
 	public static void main(String[] args) throws Exception{
+
 		// initialize the socket connection with att and server
 		Random r = new Random();
-		String serverAddress = "72.19.121.215";
+		String serverAddress = "localhost";
 		Socket server = new Socket(serverAddress, 8001);
 		int lt1 = 60000;
 		int lt2=0;
@@ -120,8 +121,8 @@ public class paymentClient {
     	pay = e.encrypt(pay, key, pbeParamSpec);
     	inserver = new PrintWriter(server.getOutputStream(),true);
     	inserver.println(pay);
-    	String solution = input.readLine();
-    	System.out.println(solution);
+
+
 		server.close();
 	}
 
