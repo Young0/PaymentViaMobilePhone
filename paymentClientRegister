@@ -1,0 +1,51 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+
+public class paymentClientRegister {
+	public static void main(String[] args) throws UnknownHostException, IOException{
+		String serverAddress = "localhost";
+		Socket server = new Socket(serverAddress, 8001);
+//		Socket platform = new Socket(serverAddress, 8003);
+		Socket attServer = new Socket(serverAddress, 8002);
+
+//client talk to server
+		PrintWriter inserver = new PrintWriter(server.getOutputStream(), true);
+		inserver.println("Register account, ID:Lusheng&code encrypted by server public key");
+		System.out.println("send to server: Register account, ID:Lusheng, encrypted by server public key");
+//client read from server
+		BufferedReader fromserver = new BufferedReader(new InputStreamReader(server.getInputStream()));
+		String answer = fromserver.readLine();
+		System.out.println("recieve: "+answer);
+		
+		//client talk to server
+				inserver = new PrintWriter(server.getOutputStream(), true);
+				inserver.println("");
+				System.out.println("send to server: Register account, ID:Lusheng, encrypted by server public key");
+		//client read from server
+				fromserver = new BufferedReader(new InputStreamReader(server.getInputStream()));
+				answer = fromserver.readLine();
+				System.out.println("recieve: "+answer);
+
+//client talk to attServer
+		PrintWriter inAttServer = new PrintWriter(attServer.getOutputStream(), true);
+		inAttServer.println("Register account, ID:Lusheng, encrypted by key between att and client");
+		System.out.println("send to attServer: Register account, ID:Lusheng, encrypted by key between att and client");
+//client read from attServer
+		BufferedReader fromAttServer = new BufferedReader(new InputStreamReader(attServer.getInputStream()));
+		String answer2 = fromAttServer.readLine();
+		if(answer2.equals("session key for server and client")){
+			System.out.println("recieve:" + answer2);
+		}else{
+			System.out.println("fail");
+		}
+
+		attServer.close();
+		server.close();
+	}
+}
