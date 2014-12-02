@@ -1,0 +1,165 @@
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.Socket;
+
+import java.util.Random;
+
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.PBEParameterSpec;
+
+
+public class serverRun implements Runnable{
+	private Socket socket;
+
+	serverRun(Socket server){
+		this.socket = server;
+	}
+	@Override
+	public void run() {
+		// TODO Auto-generated method stub
+		try{
+			RSAEncryption rsa = new RSAEncryption();
+			boolean getHello = true;
+			boolean getEncryption = false;
+			boolean getEncryptedWithPubkey = false;
+			Encryption e;
+			e = new Encryption();
+			byte[] salt = {
+	        	    (byte)0xc7, (byte)0x73, (byte)0x21, (byte)0x8c,
+	        	    (byte)0x7e, (byte)0xc8, (byte)0xee, (byte)0x99
+	        	};
+	    	int count = 20;
+	    	PBEParameterSpec pbeParamSpec = null;
+	    	PBEKeySpec pbeKeySpec;
+	    	SecretKeyFactory keyFac;
+	    	SecretKey key = null;
+			String n1="";		
+			Random r = new Random();
+			String n2=String.valueOf(r.nextInt(9999));
+			long ts1=0;
+			long ts2=0;
+			int lt1=0;
+			int lt2=60000;
+			String f = "";
+			String z= "";
+			String phnumb="";
+			PrintWriter toclient;
+
+			BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+			//getHello message
+			if(getHello == true){
+				String check = input.readLine();
+				System.out.println(check);
+				String reading = "";
+				int i = 0;
+				for(;i<check.length()&&check.charAt(i)!=',';i++){
+					reading = reading + check.charAt(i);
+				}
+				if(reading.equals("BUY")){
+					reading = "";
+					for(i=i+1;check.charAt(i)!=',';i++){
+						reading = reading + check.charAt(i);
+					}
+					ts1 = Long.parseLong(reading);
+					reading = "";
+					for(i=i+1;check.charAt(i)!=',';i++){
+						reading = reading + check.charAt(i);	
+					}
+					lt1 = Integer.parseInt(reading);
+					reading = "";
+					for(i=i+1;i<check.length();i++){
+						reading = reading + check.charAt(i);
+					}
+					n1 = reading;
+					if(System.currentTimeMillis()<(ts1+lt1)){
+						toclient = new PrintWriter(socket.getOutputStream(), true);
+						ts2 = System.currentTimeMillis();
+						toclient.println("OKBUY"+","+ts2+","+lt2+","+n2+","+"checkkey");
+						System.out.println("Random Number 2: "+ n2);
+						OutputStream os = socket.getOutputStream();
+						toclient = new PrintWriter(new OutputStreamWriter(os));
+				        ObjectOutputStream outO = new ObjectOutputStream(os);
+					    outO.writeObject(rsa.pubKey);
+					    outO.flush();
+				        toclient.flush();
+				        getHello = false;
+				        getEncryption = true;
+				    }else{
+				    	toclient = new PrintWriter(socket.getOutputStream(), true);
+						toclient.println("out of time");
+						System.out.println("out of time");
+						return;
+				    }
+				}
+			}
+
+			//send encrypted message and get the session key.
+			if(getEncryption == true){
+				DataInputStream in = new DataInputStream(socket.getInputStream());
+				int cpLength = Integer.parseInt(input.readLine());
+				byte[] check2 = new byte[cpLength];
+				in.readFully(check2);
+
+				String check3 = rsa.decryption(check2);				
+				String reading="";
+				int i = 0;
+				for(;i<check3.length()&&check3.charAt(i)!=',';i++){
+					reading = reading + check3.charAt(i);
+				}
+				phnumb = reading;
+				z = String.valueOf(r.nextInt(9999));
+				GmailSender a = new GmailSender();
+				a.send(z, phnumb);
+				for(i=i+1;i<check3.length();i++){
+					f = f+check3.charAt(i);
+				}
+				String sessionKey = n1+n2+z+f; 
+				e = new Encryption();
+		    	pbeParamSpec = new PBEParameterSpec(salt, count);
+		    	pbeKeySpec = new PBEKeySpec(sessionKey.toCharArray());
+		    	keyFac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
+		    	key = keyFac.generateSecret(pbeKeySpec);
+		    	getEncryption = false;
+		    	getEncryptedWithPubkey = true;
+			}
+			//get order message
+			if(getEncryptedWithPubkey == true){
+				String check = input.readLine();
+				String pay = e.decrypt(check, key, pbeParamSpec);
+				String checkSolution="";
+				for(int i=0;i<3;i++){
+					checkSolution = checkSolution+pay.charAt(i);
+				}
+				if(checkSolution.equals("pay")){
+					toclient = new PrintWriter(socket.getOutputStream(), true);
+					toclient.println("Payment successed");
+				}else{
+					toclient = new PrintWriter(socket.getOutputStream(), true);
+					toclient.println("Wrong Key");
+				}
+				System.out.println(pay);
+				getEncryptedWithPubkey = false;
+				getHello = true;
+			}
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} finally {
+			try {
+				socket.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+}
