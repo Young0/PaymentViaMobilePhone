@@ -1,0 +1,72 @@
+import java.security.*;
+import java.security.spec.*;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+
+import Decoder.BASE64Decoder;
+import Decoder.BASE64Encoder;
+
+
+	public class RSAEncryption {
+		Key pubKey2;
+		Cipher cipher;
+		KeyPairGenerator generator;
+		KeyPair pair;
+		Key pubKey;
+		Key privKey;
+		byte[] publicKeyBytes;
+		BASE64Encoder encoder;
+		String pubKeyStr;
+		BASE64Decoder decoder;
+		byte[] sigBytes2;
+		X509EncodedKeySpec x509KeySpec;
+		KeyFactory keyFact;
+		byte[] cipherText;
+		byte[] plainText ;
+
+		RSAEncryption() throws Exception {
+			cipher = Cipher.getInstance("RSA");
+			// create the keys
+			generator = KeyPairGenerator.getInstance("RSA");
+			generator.initialize(512, new SecureRandom());
+			pair = generator.generateKeyPair();
+			pubKey = pair.getPublic();
+			privKey = pair.getPrivate();
+	
+			// Send the public key bytes to the other party...
+			publicKeyBytes = pubKey.getEncoded();
+	
+			//Convert Public key to String
+			encoder = new BASE64Encoder();
+			pubKeyStr = encoder.encode(publicKeyBytes);
+	
+			//Convert PublicKeyString to Byte Stream
+			decoder = new BASE64Decoder();
+			sigBytes2 = decoder.decodeBuffer(pubKeyStr);
+	
+			//Convert the public key bytes into a PublicKey object
+			x509KeySpec = new X509EncodedKeySpec(sigBytes2);
+			keyFact = KeyFactory.getInstance("RSA");
+			pubKey2 = keyFact.generatePublic(x509KeySpec);
+		}
+
+		public byte[] encryption(String input, Key pbk) throws Exception{
+			// encryption step
+			cipher.init(Cipher.ENCRYPT_MODE, pbk, new SecureRandom());
+			cipherText = cipher.doFinal(input.getBytes());
+			System.out.println("cipher: " + cipherText.toString());
+			String ret = new String(cipherText, "ISO-8859-1");
+			return cipherText;
+		}
+
+		public String decryption(byte[] input) throws Exception{
+			// decryption step
+//			System.out.println("Encrypted message"+input.toString());
+			cipher.init(Cipher.DECRYPT_MODE, privKey);
+			plainText = cipher.doFinal(input);
+			System.out.println("plain : " +new String(plainText));
+			return new String(plainText);
+		}
+}
