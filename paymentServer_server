@@ -1,0 +1,22 @@
+import java.net.ServerSocket;
+
+
+public class paymentServer {
+
+	public static void main(String[] args) throws Exception{
+		System.out.println("Server started...");
+
+		ServerSocket server = new ServerSocket(8001);
+		try{
+			while (true) {
+				serverRun sr;
+				sr = new serverRun(server.accept());
+				Thread t = new Thread(sr);
+				t.start();
+			}
+		}
+		finally{
+			server.close();
+		}
+	}
+}
