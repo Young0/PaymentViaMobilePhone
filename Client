@@ -1,0 +1,131 @@
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.Key;
+import java.security.SecureRandom;
+import java.util.Random;
+import java.util.Scanner;
+
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.PBEParameterSpec;
+
+
+public class paymentClient {
+	public static void main(String[] args) throws Exception{
+		// initialize the socket connection with att and server
+		Random r = new Random();
+		String serverAddress = "72.19.121.215";
+		Socket server = new Socket(serverAddress, 8001);
+		int lt1 = 60000;
+		int lt2=0;
+		long ts1=0;
+		long ts2=0;
+		String n1= String.valueOf(r.nextInt(9999));
+		String n2="";
+		String z="";
+		String f="";
+		String opt="";
+		Scanner in;
+		Key publickey = null;
+
+		//send hello message to server.
+		PrintWriter inserver = new PrintWriter(server.getOutputStream(), true);
+		opt = "BUY";
+		ts1 = System.currentTimeMillis();
+		inserver.println(opt+","+ts1+","+lt1+","+n1);
+
+		//get and check hello message
+		BufferedReader input = new BufferedReader(new InputStreamReader(server.getInputStream()));
+		String check = input.readLine();
+		String reading = "";
+		int i = 0;
+		for(;check.charAt(i)!=',';i++){
+			reading = reading + check.charAt(i);
+		}
+		if(reading.equals("OKBUY")){
+			opt = reading;
+			reading = "";
+			for(i=i+1;check.charAt(i)!=',';i++){
+				reading = reading + check.charAt(i);
+			}
+			ts2 = Long.parseLong(reading);
+			reading = "";
+			for(i=i+1;check.charAt(i)!=',';i++){
+				reading = reading + check.charAt(i);	
+			}
+			lt2 = Integer.parseInt(reading);
+			reading = "";
+			for(i=i+1;check.charAt(i)!=',';i++){
+				reading = reading + check.charAt(i);
+			}
+			n2 = reading;
+			reading = "";
+			for(i=i+1;i<check.length();i++){
+				reading = reading + check.charAt(i);
+			}
+			if(reading.equals("checkkey")){
+				ObjectInputStream keyIn = new ObjectInputStream(server.getInputStream());
+				publickey = (Key)keyIn.readObject();
+			}
+		}
+
+		//send encrypted message with server public key.
+		if(System.currentTimeMillis()<ts2+lt2);{
+				f = String.valueOf(r.nextInt(9999));
+				System.out.println("Type in your phone number");
+				in = new Scanner(System.in);
+				String a = in.nextLine();
+				String rsaMessage = a+","+f;
+				RSAEncryption rsa = new RSAEncryption();
+				rsa.pubKey = publickey;
+				byte[] cp = rsa.encryption(rsaMessage, publickey);	
+				inserver = new PrintWriter(server.getOutputStream(), true);
+				inserver.println(cp.length);
+				OutputStream os = server.getOutputStream();
+				inserver = new PrintWriter(new OutputStreamWriter(os));
+		        DataOutputStream outO = new DataOutputStream(os);
+			    outO.write(cp);
+				inserver.println(rsaMessage);
+				System.out.println("Type in the message number");
+				in = new Scanner(System.in);
+				z = in.nextLine();
+		}
+
+		//send the order message encrypted with session key.
+		String sessionKey = n1+n2+z+f;
+		Encryption e = new Encryption();
+		byte[] salt = {
+        	    (byte)0xc7, (byte)0x73, (byte)0x21, (byte)0x8c,
+        	    (byte)0x7e, (byte)0xc8, (byte)0xee, (byte)0x99
+        	};
+    	int count = 20;
+    	PBEParameterSpec pbeParamSpec = new PBEParameterSpec(salt, count);
+    	PBEKeySpec pbeKeySpec = new PBEKeySpec(sessionKey.toCharArray());
+    	SecretKeyFactory keyFac = SecretKeyFactory.getInstance("PBEWithMD5AndDES");
+    	SecretKey key = keyFac.generateSecret(pbeKeySpec);
+    	System.out.println("type in your payment amount");
+    	in= new Scanner(System.in);
+    	String pay = in.nextLine();
+    	pay = "pay " +pay+" dollars";
+    	pay = e.encrypt(pay, key, pbeParamSpec);
+    	inserver = new PrintWriter(server.getOutputStream(),true);
+    	inserver.println(pay);
+    	String solution = input.readLine();
+    	System.out.println(solution);
+		server.close();
+	}
+
+	public static boolean Authenticates(String certificate){
+		return true;
+	}
+}
