@@ -11,7 +11,6 @@ public class paymentClientRegister {
 	public static void main(String[] args) throws UnknownHostException, IOException{
 		String serverAddress = "localhost";
 		Socket server = new Socket(serverAddress, 8001);
-//		Socket platform = new Socket(serverAddress, 8003);
 		Socket attServer = new Socket(serverAddress, 8002);
 
 //client talk to server
